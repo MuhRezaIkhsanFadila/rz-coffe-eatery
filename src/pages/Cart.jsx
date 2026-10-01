@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useCart } from '../context/CartContext.jsx'
 import { formatRupiah } from '../lib/format.js'
 import QuantityStepper from '../components/QuantityStepper.jsx'
 import EmptyState from '../components/EmptyState.jsx'
+import ProductImage from '../components/ProductImage.jsx'
 
 export default function Cart() {
   const { detailedItems, subtotal, setQty, removeItem, count } = useCart()
@@ -30,39 +32,39 @@ export default function Cart() {
 
       <div className="cart-layout">
         <div className="cart-list">
-          {detailedItems.map(({ product, qty, lineTotal }) => (
-            <div key={product.id} className="cart-row card">
-              <div className="cart-thumb">
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none'
-                    e.currentTarget.parentElement.classList.add('thumb-fallback')
-                    e.currentTarget.parentElement.dataset.emoji = product.emoji
-                  }}
-                />
-              </div>
-              <div className="cart-row-info">
-                <h3>{product.name}</h3>
-                <p className="muted">{formatRupiah(product.price)} / item</p>
-              </div>
-              <div className="cart-row-controls">
-                <QuantityStepper
-                  value={qty}
-                  onChange={(n) => setQty(product.id, n)}
-                />
-                <span className="price">{formatRupiah(lineTotal)}</span>
-                <button
-                  type="button"
-                  className="remove-btn"
-                  onClick={() => removeItem(product.id)}
-                >
-                  Hapus
-                </button>
-              </div>
-            </div>
-          ))}
+          <AnimatePresence initial={false}>
+            {detailedItems.map(({ product, qty, lineTotal }) => (
+              <motion.div
+                key={product.id}
+                layout
+                className="cart-row card"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, x: -24 }}
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <ProductImage product={product} className="cart-thumb" />
+                <div className="cart-row-info">
+                  <h3>{product.name}</h3>
+                  <p className="muted">{formatRupiah(product.price)} / item</p>
+                </div>
+                <div className="cart-row-controls">
+                  <QuantityStepper
+                    value={qty}
+                    onChange={(n) => setQty(product.id, n)}
+                  />
+                  <span className="price">{formatRupiah(lineTotal)}</span>
+                  <button
+                    type="button"
+                    className="remove-btn"
+                    onClick={() => removeItem(product.id)}
+                  >
+                    Hapus
+                  </button>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
 
         <aside className="card cart-summary">

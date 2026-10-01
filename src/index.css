@@ -59,3 +59,18 @@ h1, h2, h3 { line-height: 1.2; margin: 0 0 12px; }
 .error-text { color: var(--danger); font-size: 13px; }
 .muted { color: var(--muted); }
 .price { font-weight: 700; }
+
+/* Image loading skeleton */
+.skeleton { position: relative; overflow: hidden; }
+.skeleton::before {
+  content: ''; position: absolute; inset: 0; z-index: 0;
+  background: linear-gradient(90deg, #EFEBE4 25%, #F7F4EF 37%, #EFEBE4 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+.skeleton img { opacity: 0; transition: opacity .4s ease; }
+img.is-loaded { opacity: 1; }
+@keyframes shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}

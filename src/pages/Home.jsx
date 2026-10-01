@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { products, categories } from '../data/products.js'
-import ProductCard from '../components/ProductCard.jsx'
+import ProductGrid from '../components/ProductGrid.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 
 export default function Home() {
@@ -49,11 +49,7 @@ export default function Home() {
         <h2>Best Seller</h2>
         <a href="#menu" className="link-more">Lihat semua →</a>
       </div>
-      <div className="grid">
-        {bestSellers.map((p) => (
-          <ProductCard key={p.id} product={p} />
-        ))}
-      </div>
+      <ProductGrid products={bestSellers} />
 
       <div className="section-head" id="menu">
         <h2>Menu Kami</h2>
@@ -100,11 +96,7 @@ export default function Home() {
           message="Coba kata kunci atau kategori lain."
         />
       ) : (
-        <div className="grid">
-          {filtered.map((p) => (
-            <ProductCard key={p.id} product={p} />
-          ))}
-        </div>
+        <ProductGrid products={filtered} />
       )}
 
       <section className="info-strip">

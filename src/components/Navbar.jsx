@@ -1,4 +1,5 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useCart } from '../context/CartContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 
@@ -26,7 +27,20 @@ export default function Navbar() {
           </NavLink>
           <NavLink to="/keranjang">
             Keranjang
-            {count > 0 && <span className="cart-badge">{count}</span>}
+            <AnimatePresence>
+              {count > 0 && (
+                <motion.span
+                  key={count}
+                  className="cart-badge"
+                  initial={{ scale: 0.4, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.4, opacity: 0 }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                >
+                  {count}
+                </motion.span>
+              )}
+            </AnimatePresence>
           </NavLink>
           {user ? (
             <>

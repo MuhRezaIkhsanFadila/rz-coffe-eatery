@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { AnimatePresence, motion } from 'framer-motion'
 import { products } from '../data/products.js'
 import { useCart } from '../context/CartContext.jsx'
 import { formatRupiah } from '../lib/format.js'
 import QuantityStepper from '../components/QuantityStepper.jsx'
+import ProductImage from '../components/ProductImage.jsx'
 
 export default function ProductDetail() {
   const { id } = useParams()
@@ -34,17 +36,7 @@ export default function ProductDetail() {
     <div className="container">
       <Link to="/" className="crumb">← Kembali ke menu</Link>
       <div className="detail">
-        <div className="detail-media">
-          <img
-            src={product.image}
-            alt={product.name}
-            onError={(e) => {
-              e.currentTarget.style.display = 'none'
-              e.currentTarget.parentElement.classList.add('thumb-fallback')
-              e.currentTarget.parentElement.dataset.emoji = product.emoji
-            }}
-          />
-        </div>
+        <ProductImage product={product} className="detail-media" />
 
         <div className="detail-info">
           <span className="product-cat">{product.category}</span>
@@ -65,7 +57,19 @@ export default function ProductDetail() {
         </div>
       </div>
 
-      {toast && <div className="toast">{toast}</div>}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            className="toast"
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+          >
+            {toast}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
