@@ -17,8 +17,8 @@ export default function Navbar() {
     <header className="navbar">
       <div className="navbar-inner">
         <Link to="/" className="brand">
-          <span className="brand-mark">Z</span>
-          <span className="brand-text">Zaa Coffe &amp; eatery</span>
+          <span className="brand-mark">RZ</span>
+          <span className="brand-text">RZ COFFE &amp; EATERY</span>
         </Link>
 
         <nav className="nav-links">

@@ -31,7 +31,7 @@ export default function Home() {
       <section className="hero">
         <h1>Kopi & makanan favoritmu, diantar hangat.</h1>
         <p>
-          Selamat datang di Zaa Coffe &amp; eatery. Pesan kopi, makanan, dan
+          Selamat datang di RZ COFFE &amp; EATERY. Pesan kopi, makanan, dan
           camilan pilihan langsung dari menu kami.
         </p>
         <a href="#menu" className="btn">Lihat Menu</a>
@@ -40,7 +40,7 @@ export default function Home() {
       <section className="promo">
         <div>
           <h2>Diskon 20% untuk pembelian pertama</h2>
-          <p>Pakai kode <strong>ZAA20</strong> saat memesan menu favoritmu.</p>
+          <p>Pakai kode <strong>RZ20</strong> saat memesan menu favoritmu.</p>
         </div>
         <a href="#menu" className="btn">Pesan Sekarang</a>
       </section>
@@ -113,7 +113,7 @@ export default function Home() {
         <div className="info-card card">
           <span className="info-icon">📞</span>
           <h3>Kontak</h3>
-          <p className="muted">0812-3456-7890 · halo@zaa.coffe</p>
+          <p className="muted">0812-3456-7890 · halo@rz.coffe</p>
         </div>
       </section>
     </div>
