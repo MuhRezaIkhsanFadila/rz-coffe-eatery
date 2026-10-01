@@ -21,6 +21,11 @@ export default function Home() {
     return list
   }, [category, query, sort])
 
+  const bestSellers = useMemo(
+    () => products.filter((p) => p.tag === 'Favorit'),
+    []
+  )
+
   return (
     <div className="container">
       <section className="hero">
@@ -31,6 +36,24 @@ export default function Home() {
         </p>
         <a href="#menu" className="btn">Lihat Menu</a>
       </section>
+
+      <section className="promo">
+        <div>
+          <h2>Diskon 20% untuk pembelian pertama</h2>
+          <p>Pakai kode <strong>ZAA20</strong> saat memesan menu favoritmu.</p>
+        </div>
+        <a href="#menu" className="btn">Pesan Sekarang</a>
+      </section>
+
+      <div className="section-head">
+        <h2>Best Seller</h2>
+        <a href="#menu" className="link-more">Lihat semua →</a>
+      </div>
+      <div className="grid">
+        {bestSellers.map((p) => (
+          <ProductCard key={p.id} product={p} />
+        ))}
+      </div>
 
       <div className="section-head" id="menu">
         <h2>Menu Kami</h2>
@@ -83,6 +106,24 @@ export default function Home() {
           ))}
         </div>
       )}
+
+      <section className="info-strip">
+        <div className="info-card card">
+          <span className="info-icon">🕘</span>
+          <h3>Jam Buka</h3>
+          <p className="muted">Setiap hari, 08.00 – 22.00 WIB</p>
+        </div>
+        <div className="info-card card">
+          <span className="info-icon">📍</span>
+          <h3>Lokasi</h3>
+          <p className="muted">Jl. Kopi Nikmat No. 12, Jakarta</p>
+        </div>
+        <div className="info-card card">
+          <span className="info-icon">📞</span>
+          <h3>Kontak</h3>
+          <p className="muted">0812-3456-7890 · halo@zaa.coffe</p>
+        </div>
+      </section>
     </div>
   )
 }

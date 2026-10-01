@@ -80,7 +80,28 @@
 .notfound { text-align: center; padding: 80px 20px; }
 .notfound .code { font-size: 72px; font-weight: 800; color: var(--brand); margin: 0; }
 
+/* Promo banner */
+.promo {
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  flex-wrap: wrap; margin: 20px 0 4px; padding: 26px 32px; border-radius: 18px;
+  background: linear-gradient(120deg, #F3E9DC 0%, #E8D8C3 100%);
+  border: 1px solid var(--border);
+}
+.promo h2 { margin: 0 0 4px; font-size: clamp(18px, 2.5vw, 24px); }
+.promo p { margin: 0; color: var(--muted); }
+.promo strong { color: var(--brand); }
+.link-more { font-size: 14px; font-weight: 600; color: var(--brand); }
+.link-more:hover { text-decoration: underline; }
+
+/* Info strip */
+.info-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 44px; }
+.info-card { padding: 24px; text-align: center; }
+.info-icon { font-size: 30px; display: block; margin-bottom: 8px; }
+.info-card h3 { font-size: 16px; margin: 0 0 6px; }
+.info-card p { margin: 0; font-size: 14px; }
+
 @media (max-width: 820px) {
+  .info-strip { grid-template-columns: 1fr; }
   .detail { grid-template-columns: 1fr; gap: 22px; }
   .cart-layout { grid-template-columns: 1fr; }
   .cart-summary { position: static; }
