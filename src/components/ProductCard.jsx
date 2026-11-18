@@ -13,7 +13,7 @@ export default function ProductCard({ product }) {
         <h3 className="product-name">{product.name}</h3>
         <div className="product-foot">
           <span className="price">{formatRupiah(product.price)}</span>
-          <span className="rating">★ {product.rating.toFixed(1)}</span>
+          <span className="rating">★ {Number(product.rating || 0).toFixed(1)}</span>
         </div>
       </div>
     </Link>

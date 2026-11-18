@@ -153,7 +153,7 @@ exports.handler = async (event) => {
     // ---------------- PRODUCTS (public) ----------------
     if (seg[0] === 'products' && seg.length === 1 && method === 'GET') {
       const { rows } = await query(
-        `select id,name,category,price,image,emoji,description,rating,tag,sort,available
+        `select id,name,category,price::int as price,image,emoji,description,rating::float8 as rating,tag,sort,available
            from products where available = true
            order by sort asc nulls last, name asc`
       )
