@@ -3,6 +3,24 @@ import { Link, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { api } from '../lib/api.js'
 import { formatRupiah } from '../lib/format.js'
+import {
+  statusLabel,
+  ORDER_FLOW,
+  flowIndex,
+  isFinalStatus,
+  canCancel,
+  isPaidStatus,
+} from '../lib/orders.js'
+
+const TITLE = {
+  pending: 'Menunggu Pembayaran',
+  paid: 'Pembayaran Berhasil',
+  processing: 'Pesanan Sedang Diproses',
+  ready: 'Pesanan Siap Diambil',
+  completed: 'Pesanan Selesai',
+  expired: 'Pesanan Kedaluwarsa',
+  cancelled: 'Pesanan Dibatalkan',
+}
 
 function formatDate(iso) {
   if (!iso) return '-'
@@ -21,6 +39,7 @@ export default function OrderSuccess() {
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [cancelling, setCancelling] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -62,7 +81,22 @@ export default function OrderSuccess() {
     )
   }
 
-  const paid = order.status === 'paid'
+  const paid = isPaidStatus(order.status)
+  const activeIndex = flowIndex(order.status)
+  const closed = isFinalStatus(order.status) && !paid
+
+  async function cancelOrder() {
+    if (!window.confirm('Batalkan pesanan ini?')) return
+    setCancelling(true)
+    try {
+      const res = await api.post(`/orders/${order.id}/cancel`)
+      setOrder(res.order ?? res)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setCancelling(false)
+    }
+  }
 
   return (
     <div className="container">
@@ -74,16 +108,30 @@ export default function OrderSuccess() {
       >
         <div className="receipt-head">
           <div className={`receipt-check ${paid ? '' : 'pending'}`}>
-            {paid ? '✓' : '•'}
+            {order.status === 'completed' ? '✓✓' : paid ? '✓' : closed ? '×' : '•'}
           </div>
-          <h2>{paid ? 'Pembayaran Berhasil' : 'Menunggu Pembayaran'}</h2>
+          <h2>{TITLE[order.status] || 'Pesanan'}</h2>
           <p className="muted">
             Pesanan #{String(order.id).slice(0, 8).toUpperCase()}
           </p>
           <span className={`status-badge ${order.status}`}>
-            {paid ? 'LUNAS' : order.status.toUpperCase()}
+            {statusLabel(order.status)}
           </span>
         </div>
+
+        {activeIndex >= 0 && (
+          <ol className="order-track">
+            {ORDER_FLOW.map((step, i) => (
+              <li
+                key={step.key}
+                className={`order-track-step ${i < activeIndex ? 'done' : ''} ${i === activeIndex ? 'current' : ''}`}
+              >
+                <span className="dot" />
+                <span className="label">{step.label}</span>
+              </li>
+            ))}
+          </ol>
+        )}
 
         <div className="receipt-meta">
           <div className="receipt-row">
@@ -138,7 +186,24 @@ export default function OrderSuccess() {
           </div>
         </div>
 
+        {error && <p className="error-text">{error}</p>}
+
         <div className="receipt-actions">
+          {order.status === 'pending' && (
+            <Link to={`/pembayaran/${order.id}`} className="btn btn-primary btn-block">
+              Lanjut Bayar
+            </Link>
+          )}
+          {canCancel(order.status) && (
+            <button
+              type="button"
+              className="btn btn-block"
+              onClick={cancelOrder}
+              disabled={cancelling}
+            >
+              {cancelling ? 'Membatalkan…' : 'Batalkan Pesanan'}
+            </button>
+          )}
           <button type="button" className="btn btn-block" onClick={() => window.print()}>
             🖨 Cetak / Simpan PDF
           </button>

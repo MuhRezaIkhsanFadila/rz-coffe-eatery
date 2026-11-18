@@ -20,7 +20,11 @@ function crc16(str) {
 }
 
 function makeRef() {
-  return 'RZ' + Date.now().toString(36).toUpperCase()
+  // Stempel waktu saja tidak cukup: dua pesanan pada milidetik yang sama
+  // akan berbagi nomor referensi. Tambahkan 4 karakter acak.
+  const stamp = Date.now().toString(36).toUpperCase()
+  const rand = Math.random().toString(36).slice(2, 6).toUpperCase().padEnd(4, '0')
+  return 'RZ' + stamp + rand
 }
 
 function buildQris(amount, ref) {

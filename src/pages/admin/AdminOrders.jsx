@@ -1,15 +1,21 @@
 import { Fragment, useEffect, useState } from 'react'
 import { api } from '../../lib/api.js'
 import { formatRupiah } from '../../lib/format.js'
+import { STATUS_LABEL, statusLabel } from '../../lib/orders.js'
+
+const BASE = import.meta.env.VITE_API_URL || '/api'
 
 const FILTERS = [
   { key: 'all', label: 'Semua' },
   { key: 'pending', label: 'Menunggu' },
   { key: 'paid', label: 'Lunas' },
+  { key: 'processing', label: 'Diproses' },
+  { key: 'ready', label: 'Siap' },
+  { key: 'completed', label: 'Selesai' },
   { key: 'expired', label: 'Kedaluwarsa' },
   { key: 'cancelled', label: 'Dibatalkan' },
 ]
-const STATUSES = ['pending', 'paid', 'expired', 'cancelled']
+const STATUSES = Object.keys(STATUS_LABEL)
 
 function formatDate(iso) {
   if (!iso) return '-'
@@ -26,6 +32,36 @@ export default function AdminOrders() {
   const [error, setError] = useState('')
   const [filter, setFilter] = useState('all')
   const [open, setOpen] = useState(null)
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
+  const [exporting, setExporting] = useState(false)
+
+  async function exportCsv() {
+    setExporting(true)
+    setError('')
+    try {
+      const qs = new URLSearchParams()
+      if (from) qs.set('from', from)
+      if (to) qs.set('to', to)
+      const res = await fetch(`${BASE}/admin/orders/export?${qs}`, {
+        headers: { Authorization: `Bearer ${api.getToken()}` },
+      })
+      if (!res.ok) throw new Error('Gagal mengunduh laporan.')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `pesanan-rz-${new Date().toISOString().slice(0, 10)}.csv`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   async function load() {
     setLoading(true)
@@ -56,6 +92,21 @@ export default function AdminOrders() {
   return (
     <div>
       <h1 className="admin-h1">Pesanan</h1>
+      <div className="card export-bar">
+        <div className="export-fields">
+          <label>
+            <span className="muted small">Dari</span>
+            <input type="date" className="input" value={from} onChange={(e) => setFrom(e.target.value)} />
+          </label>
+          <label>
+            <span className="muted small">Sampai</span>
+            <input type="date" className="input" value={to} onChange={(e) => setTo(e.target.value)} />
+          </label>
+        </div>
+        <button type="button" className="btn btn-primary" onClick={exportCsv} disabled={exporting}>
+          {exporting ? 'Menyiapkan…' : '⬇ Unduh Laporan CSV'}
+        </button>
+      </div>
       <div className="chips" style={{ marginBottom: 18 }}>
         {FILTERS.map((f) => (
           <button
@@ -111,7 +162,7 @@ export default function AdminOrders() {
                       <td>{formatRupiah(o.total)}</td>
                       <td>
                         <span className={`status-badge ${o.status}`}>
-                          {o.status.toUpperCase()}
+                          {statusLabel(o.status)}
                         </span>
                       </td>
                       <td className="muted small">{formatDate(o.created_at)}</td>
@@ -142,7 +193,7 @@ export default function AdminOrders() {
                                   onChange={(e) => changeStatus(o, e.target.value)}
                                 >
                                   {STATUSES.map((s) => (
-                                    <option key={s} value={s}>{s}</option>
+                                    <option key={s} value={s}>{statusLabel(s)}</option>
                                   ))}
                                 </select>
                               </label>

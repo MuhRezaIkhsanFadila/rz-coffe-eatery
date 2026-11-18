@@ -8,11 +8,45 @@ const {
   comparePassword,
   signToken,
   getUser,
+  CORS,
 } = require('./_lib/auth.cjs')
 const { buildQris, makeRef } = require('./_lib/qris.cjs')
 const { computeDiscount } = require('./_lib/voucher.cjs')
+const {
+  ORDER_STATUSES,
+  PAID_STATUSES,
+  expireMinutes,
+  sumLineTotals,
+  orderTotal,
+  buildOrdersCsv,
+} = require('./_lib/orders.cjs')
 
-const ORDER_STATUSES = ['pending', 'paid', 'expired', 'cancelled']
+// Respons CSV (export laporan) — bukan JSON, jadi header ditulis manual.
+function csvResponse(filename, text) {
+  return {
+    statusCode: 200,
+    headers: {
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Cache-Control': 'no-store',
+      ...CORS,
+    },
+    body: '\ufeff' + text,
+  }
+}
+
+// Pesanan pending yang lewat batas waktu dianggap kedaluwarsa.
+// Dijalankan saat daftar pesanan dibaca, jadi tidak perlu cron terpisah.
+async function expireStaleOrders() {
+  const minutes = expireMinutes(process.env)
+  await query(
+    `update orders set status='expired'
+      where status='pending'
+        and created_at < now() - ($1::int * interval '1 minute')`,
+    [minutes]
+  )
+}
+
 
 function publicUser(row) {
   return { id: row.id, name: row.name, email: row.email, role: row.role }
@@ -199,12 +233,13 @@ exports.handler = async (event) => {
     if (seg[0] === 'orders') {
       const auth = getUser(event)
       if (!auth) return json(401, { error: 'Silakan login dulu.' })
+      await expireStaleOrders()
 
       // POST /orders
       if (method === 'POST' && seg.length === 1) {
         const { items, error } = await pricedItems(body.items)
         if (error) return json(400, { error })
-        const subtotal = items.reduce((s, i) => s + i.lineTotal, 0)
+        const subtotal = sumLineTotals(items)
 
         let discount = 0
         let voucherCode = null
@@ -222,7 +257,7 @@ exports.handler = async (event) => {
           voucherCode = voucher.code
         }
 
-        const total = Math.max(0, subtotal - discount)
+        const total = orderTotal(subtotal, discount)
         const ref = makeRef()
         const qris = buildQris(total, ref)
         const customerName = (body.customerName || '').trim() || null
@@ -317,6 +352,34 @@ exports.handler = async (event) => {
         paid.items = map[paid.id] || []
         return json(200, { order: paid })
       }
+
+      // POST /orders/:id/cancel  (pembeli membatalkan selama belum diproses)
+      if (method === 'POST' && seg.length === 3 && seg[2] === 'cancel') {
+        const { rows } = await query('select * from orders where id=$1', [seg[1]])
+        const order = rows[0]
+        if (!order || order.user_id !== auth.id)
+          return json(404, { error: 'Pesanan tidak ditemukan.' })
+        if (!['pending', 'paid'].includes(order.status))
+          return json(400, {
+            error: 'Pesanan sudah diproses, hubungi kasir untuk pembatalan.',
+          })
+        const { rows: urows } = await query(
+          `update orders set status='cancelled' where id=$1 returning *`,
+          [order.id]
+        )
+        const cancelled = urows[0]
+        // Pembatalan setelah bayar mengembalikan kuota voucher.
+        if (order.status === 'paid' && cancelled.voucher_code) {
+          await query(
+            `update vouchers set used_count = greatest(0, used_count - 1)
+              where upper(code)=upper($1)`,
+            [cancelled.voucher_code]
+          )
+        }
+        const map = await itemsForOrders([cancelled.id])
+        cancelled.items = map[cancelled.id] || []
+        return json(200, { order: cancelled })
+      }
     }
 
     // ---------------- ADMIN (auth + role admin) ----------------
@@ -328,10 +391,12 @@ exports.handler = async (event) => {
 
       // GET /admin/stats
       if (method === 'GET' && seg[1] === 'stats') {
+        await expireStaleOrders()
+        const paidIn = PAID_STATUSES.map((s) => `'${s}'`).join(',')
         const [tot, paid, prod, vou, recent, top] = await Promise.all([
           query('select count(*)::int n from orders'),
           query(
-            "select count(*)::int n, coalesce(sum(total),0)::int rev from orders where status='paid'"
+            `select count(*)::int n, coalesce(sum(total),0)::int rev from orders where status in (${paidIn})`
           ),
           query('select count(*)::int n from products'),
           query('select count(*)::int n from vouchers'),
@@ -341,7 +406,7 @@ exports.handler = async (event) => {
           query(
             `select oi.product_id, oi.name, sum(oi.qty)::int qty_sold
                from order_items oi join orders o on o.id=oi.order_id
-               where o.status='paid'
+               where o.status in (${paidIn})
                group by oi.product_id, oi.name
                order by qty_sold desc limit 5`
           ),
@@ -442,7 +507,38 @@ exports.handler = async (event) => {
 
       // -------- ORDERS admin --------
       if (seg[1] === 'orders') {
+        // GET /admin/orders/export?from=YYYY-MM-DD&to=YYYY-MM-DD
+        if (method === 'GET' && seg[2] === 'export') {
+          await expireStaleOrders()
+          const cond = []
+          const params = []
+          const dateRe = /^\d{4}-\d{2}-\d{2}$/
+          if (dateRe.test(qs.from || '')) {
+            params.push(qs.from)
+            cond.push(`o.created_at >= $${params.length}::date`)
+          }
+          if (dateRe.test(qs.to || '')) {
+            params.push(qs.to)
+            cond.push(
+              `o.created_at < ($${params.length}::date + interval '1 day')`
+            )
+          }
+          const where = cond.length ? `where ${cond.join(' and ')}` : ''
+          const { rows } = await query(
+            `select o.*, u.email as user_email, u.name as user_name
+               from orders o left join users u on u.id=o.user_id
+               ${where}
+               order by o.created_at asc`,
+            params
+          )
+          const map = await itemsForOrders(rows.map((r) => r.id))
+          for (const o of rows) o.items = map[o.id] || []
+          const stamp = new Date().toISOString().slice(0, 10)
+          return csvResponse(`pesanan-rz-${stamp}.csv`, buildOrdersCsv(rows))
+        }
+
         if (method === 'GET' && seg.length === 2) {
+          await expireStaleOrders()
           const status = qs.status
           const where =
             status && ORDER_STATUSES.includes(status) ? 'where o.status=$1' : ''
@@ -462,13 +558,29 @@ exports.handler = async (event) => {
           const status = body.status
           if (!ORDER_STATUSES.includes(status))
             return json(400, { error: 'Status tidak valid.' })
+          const { rows: beforeRows } = await query(
+            'select id,status,voucher_code from orders where id=$1',
+            [seg[2]]
+          )
+          if (!beforeRows[0]) return json(404, { error: 'Pesanan tidak ditemukan.' })
+          const before = beforeRows[0]
           const paidAt = status === 'paid' ? ', paid_at=now()' : ''
           const { rows } = await query(
             `update orders set status=$1 ${paidAt} where id=$2 returning *`,
             [status, seg[2]]
           )
-          if (!rows[0]) return json(404, { error: 'Pesanan tidak ditemukan.' })
-          return json(200, { order: rows[0] })
+          const updated = rows[0]
+          // Keluar dari status lunas: kembalikan kuota voucher yang tadi terpakai.
+          const wasPaid = PAID_STATUSES.includes(before.status)
+          const stillPaid = PAID_STATUSES.includes(status)
+          if (wasPaid && !stillPaid && before.voucher_code) {
+            await query(
+              `update vouchers set used_count = greatest(0, used_count - 1)
+                where upper(code)=upper($1)`,
+              [before.voucher_code]
+            )
+          }
+          return json(200, { order: updated })
         }
       }
 

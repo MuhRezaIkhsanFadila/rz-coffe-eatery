@@ -142,6 +142,35 @@
 .status-badge.pending { background: #FDF0DD; color: #B5791A; }
 .status-badge.expired { background: #EFECEA; color: #7A736C; }
 .status-badge.cancelled { background: #FBE6E4; color: var(--danger); }
+.status-badge.processing { background: #E7F0FB; color: #1D5FA8; }
+.status-badge.ready { background: #EAF4EA; color: #2F7D3A; }
+.status-badge.completed { background: #DDEEDF; color: #17692F; }
+
+/* ============ Pelacakan pesanan (pembeli) ============ */
+.order-track {
+  list-style: none; display: flex; padding: 18px 0 4px; margin: 16px 0 0;
+  border-top: 1px dashed var(--border);
+}
+.order-track-step { flex: 1; text-align: center; font-size: 11px; color: var(--muted); }
+.order-track-step .dot {
+  display: block; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--border); margin: 0 auto 6px;
+}
+.order-track-step.done .dot { background: #1E7E44; }
+.order-track-step.current .dot { background: var(--brand); box-shadow: 0 0 0 4px rgba(111, 78, 55, .15); }
+.order-track-step.done .label, .order-track-step.current .label { color: var(--text); font-weight: 700; }
+
+/* ============ Export laporan (admin) ============ */
+.export-bar {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 14px; flex-wrap: wrap; padding: 14px 16px; margin-bottom: 16px;
+}
+.export-fields { display: flex; gap: 12px; }
+.export-fields label { display: flex; flex-direction: column; gap: 4px; }
+.export-fields .input {
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--surface); color: var(--text);
+}
 
 /* ============ QRIS payment ============ */
 .pay-wrap { display: grid; grid-template-columns: 380px 1fr; gap: 28px; align-items: start; }
@@ -200,8 +229,9 @@
   padding: 16px 18px; transition: box-shadow .16s ease, transform .16s ease;
 }
 .order-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
-.order-card-main { display: flex; flex-direction: column; gap: 3px; }
+.order-card-main { display: flex; flex-direction: column; gap: 3px; color: inherit; text-decoration: none; }
 .order-card-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.order-card .btn-sm { padding: 5px 10px; font-size: 12px; border: 1px solid var(--border); background: var(--surface); }
 
 /* ============ Admin login ============ */
 .admin-login-page {

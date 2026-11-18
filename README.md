@@ -16,12 +16,15 @@ Aplikasi pemesanan kopi & makanan dengan **mode user** dan **mode admin**, pemba
 - Checkout + **input voucher** (diskon otomatis)
 - **Pembayaran QRIS** (QR tergenerate dari payload EMVCo asli — disimulasikan untuk demo)
 - Struk/receipt + riwayat pesanan
+- **Pelacakan status pesanan** (Dibuat → Dibayar → Diproses → Siap → Selesai)
+- Batalkan pesanan selama belum diproses
 
 **Admin** (login terpisah, user biasa TIDAK bisa masuk)
 - Dashboard statistik + grafik pendapatan
 - Kelola menu (tambah/edit/hapus, atur ketersediaan)
 - **Terbitkan voucher/diskon** (persen atau nominal; scope semua / kategori / produk tertentu)
-- Kelola pesanan (ubah status)
+- Kelola pesanan (ubah status: diproses, siap, selesai, batal)
+- **Unduh laporan pesanan (CSV)** dengan filter tanggal Dari–Sampai
 
 ---
 
@@ -49,6 +52,11 @@ JWT_SECRET=string-acak-panjang-bebas
 npm run db:init
 ```
 Membuat semua tabel, seed 16 produk, dan 2 voucher contoh (`RZ20`, `KOPI5K`).
+
+Kalau database sudah pernah dibuat (versi lama), jalankan migrasi siklus hidup pesanan:
+```bash
+psql "$DATABASE_URL" -f db/migrations/002-order-lifecycle.sql
+```
 
 ### 4. Buat akun admin
 ```bash
@@ -93,6 +101,31 @@ QR dibuat dari payload **EMVCo QRIS** yang strukturnya valid (termasuk CRC16), t
 
 ---
 
+## 🧪 Test
+
+```bash
+npm test
+```
+22 unit test (Vitest): aturan voucher, checksum CRC16 QRIS beserta struktur payload, perhitungan total pesanan, bentuk export CSV, dan konsistensi status antara kode dengan `db/schema.sql`. Dijalankan otomatis di GitHub Actions pada setiap push/PR.
+
+---
+
+## 🔄 Status Pesanan
+
+| Status | Arti |
+|---|---|
+| `pending` | Pesanan dibuat, menunggu pembayaran |
+| `paid` | Sudah dibayar |
+| `processing` | Sedang disiapkan dapur |
+| `ready` | Siap diambil |
+| `completed` | Selesai |
+| `expired` | Lewat batas waktu bayar (default 30 menit, `ORDER_EXPIRE_MINUTES`) |
+| `cancelled` | Dibatalkan pembeli/admin |
+
+Pesanan `pending` yang melewati batas waktu ditandai `expired` otomatis saat daftar pesanan dibaca — tidak perlu cron terpisah.
+
+---
+
 ## 🔑 Akun & Voucher Contoh
 - **User:** daftar sendiri di `/daftar`
 - **Admin:** dibuat via `npm run admin:create`, login di `/admin/login`
@@ -109,9 +142,11 @@ src/                 Frontend React
   lib/api.js         Wrapper fetch ke /api
 netlify/functions/   Backend API (api.cjs + _lib)
 db/schema.sql        Skema + seed PostgreSQL
+db/migrations/       Migrasi skema (jalankan sekali)
+test/                Unit test Vitest
 scripts/             init-db & create-admin
 netlify.toml         Config build + redirect
 ```
 
 ## 🛠️ Stack & Endpoint
-API base: `/api` — mis. `/api/auth/login`, `/api/auth/admin/login`, `/api/products`, `/api/orders`, `/api/vouchers/validate`, `/api/admin/*`.
+API base: `/api` — mis. `/api/auth/login`, `/api/auth/admin/login`, `/api/products`, `/api/orders`, `/api/orders/:id/pay`, `/api/orders/:id/cancel`, `/api/vouchers/validate`, `/api/admin/stats`, `/api/admin/orders`, `/api/admin/orders/export?from=YYYY-MM-DD&to=YYYY-MM-DD`.

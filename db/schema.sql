@@ -68,7 +68,7 @@ on conflict (id) do update set
 create table if not exists orders (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references users (id) on delete cascade,
-  status text not null default 'pending' check (status in ('pending','paid','expired','cancelled')),
+  status text not null default 'pending' check (status in ('pending','paid','processing','ready','completed','expired','cancelled')),
   subtotal integer not null default 0,
   discount integer not null default 0,
   total integer not null default 0,

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../../lib/api.js'
 import { formatRupiah } from '../../lib/format.js'
+import { isPaidStatus, statusLabel } from '../../lib/orders.js'
 
 const DOW = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
 
@@ -27,7 +28,7 @@ function buildRevenue7d(orders) {
   }
   const index = new Map(days.map((d) => [d.key, d]))
   for (const o of orders) {
-    if (o.status !== 'paid' || !o.created_at) continue
+    if (!isPaidStatus(o.status) || !o.created_at) continue
     const d = new Date(o.created_at)
     const slot = index.get(dayKey(d))
     if (slot) slot.value += Number(o.total) || 0
@@ -135,7 +136,7 @@ export default function AdminDashboard() {
                   </span>
                   <span>
                     <span className={`status-badge ${o.status}`}>
-                      {o.status?.toUpperCase()}
+                      {statusLabel(o.status)}
                     </span>{' '}
                     {formatRupiah(o.total)}
                   </span>

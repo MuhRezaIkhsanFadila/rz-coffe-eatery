@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
 import { formatRupiah } from '../lib/format.js'
+import { statusLabel, canCancel } from '../lib/orders.js'
 
 function formatDate(iso) {
   if (!iso) return '-'
@@ -16,18 +17,29 @@ function formatDate(iso) {
   }
 }
 
-const STATUS_LABEL = {
-  pending: 'MENUNGGU',
-  paid: 'LUNAS',
-  expired: 'KEDALUWARSA',
-  cancelled: 'DIBATALKAN',
-}
-
 export default function Account() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
+  const [busyId, setBusyId] = useState(null)
+  const [notice, setNotice] = useState('')
+
+  async function handleCancel(order) {
+    if (!window.confirm(`Batalkan pesanan #${String(order.id).slice(0, 8).toUpperCase()}?`)) return
+    setBusyId(order.id)
+    setNotice('')
+    try {
+      await api.post(`/orders/${order.id}/cancel`)
+      const res = await api.get('/orders')
+      setOrders(Array.isArray(res) ? res : res.orders || [])
+      setNotice('Pesanan dibatalkan.')
+    } catch (err) {
+      setNotice(err.message)
+    } finally {
+      setBusyId(null)
+    }
+  }
 
   useEffect(() => {
     let active = true
@@ -91,6 +103,8 @@ export default function Account() {
         <span className="muted">{orders.length} pesanan</span>
       </div>
 
+      {notice && <p className="muted small" style={{ marginBottom: 12 }}>{notice}</p>}
+
       {loading ? (
         <p className="muted">Memuat pesanan…</p>
       ) : orders.length === 0 ? (
@@ -102,25 +116,35 @@ export default function Account() {
       ) : (
         <div className="order-history">
           {orders.map((o) => {
-            const paid = o.status === 'paid'
-            const to = paid ? `/pesanan/${o.id}` : `/pembayaran/${o.id}`
+            const to = o.status === 'pending' ? `/pembayaran/${o.id}` : `/pesanan/${o.id}`
             const itemCount = (o.items || []).reduce((s, i) => s + i.qty, 0)
+            const cancellable = canCancel(o.status)
             return (
-              <Link to={to} key={o.id} className="order-card card">
-                <div className="order-card-main">
+              <div key={o.id} className="order-card card">
+                <Link to={to} className="order-card-main">
                   <strong>#{String(o.id).slice(0, 8).toUpperCase()}</strong>
                   <span className="muted small">{formatDate(o.created_at)}</span>
                   <span className="muted small">
                     {itemCount} item · {o.payment_method || 'QRIS'}
                   </span>
-                </div>
+                </Link>
                 <div className="order-card-side">
                   <span className={`status-badge ${o.status}`}>
-                    {STATUS_LABEL[o.status] || o.status.toUpperCase()}
+                    {statusLabel(o.status)}
                   </span>
                   <strong>{formatRupiah(o.total)}</strong>
+                  {cancellable && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => handleCancel(o)}
+                      disabled={busyId === o.id}
+                    >
+                      {busyId === o.id ? 'Membatalkan…' : 'Batalkan'}
+                    </button>
+                  )}
                 </div>
-              </Link>
+              </div>
             )
           })}
         </div>

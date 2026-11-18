@@ -27,7 +27,7 @@ export default function Payment() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [paying, setPaying] = useState(false)
-  const { label, expired } = useCountdown(300)
+  const { label, expired } = useCountdown(1800)
 
   useEffect(() => {
     let active = true
@@ -36,7 +36,7 @@ export default function Payment() {
         const res = await api.get(`/orders/${id}`)
         const o = res.order ?? res
         if (!active) return
-        if (o.status === 'paid') {
+        if (o.status !== 'pending') {
           navigate(`/pesanan/${id}`, { replace: true })
           return
         }
@@ -125,7 +125,9 @@ export default function Payment() {
           </p>
 
           <div className={`timer ${expired ? 'timer-expired' : ''}`}>
-            {expired ? 'Waktu habis — ini demo, tetap bisa dibayar' : `Berlaku ${label}`}
+            {expired
+              ? 'Waktu habis — pesanan ini akan ditandai kedaluwarsa'
+              : `Selesaikan dalam ${label}`}
           </div>
 
           <span className="demo-chip">● Mode demo — pembayaran disimulasikan</span>
@@ -136,7 +138,7 @@ export default function Payment() {
             type="button"
             className="btn btn-primary btn-block"
             onClick={pay}
-            disabled={paying}
+            disabled={paying || expired}
             style={{ marginTop: 16 }}
           >
             {paying ? 'Memproses…' : 'Simulasikan pembayaran berhasil'}
