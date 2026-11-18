@@ -9,10 +9,14 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
-    const res = login(email, password)
+    setError('')
+    setLoading(true)
+    const res = await login(email, password)
+    setLoading(false)
     if (!res.ok) {
       setError(res.error)
       return
@@ -25,7 +29,7 @@ export default function Login() {
       <div className="auth-wrap">
         <form className="card auth-card" onSubmit={handleSubmit}>
           <h1>Masuk</h1>
-          <p className="muted">Masuk untuk melihat akunmu.</p>
+          <p className="muted">Masuk untuk berbelanja dan melihat pesananmu.</p>
 
           {error && <p className="error-text">{error}</p>}
 
@@ -52,12 +56,19 @@ export default function Login() {
             />
           </div>
 
-          <button type="submit" className="btn btn-primary btn-block">
-            Masuk
+          <button
+            type="submit"
+            className="btn btn-primary btn-block"
+            disabled={loading}
+          >
+            {loading ? 'Memproses…' : 'Masuk'}
           </button>
 
           <p className="auth-alt">
             Belum punya akun? <Link to="/daftar">Daftar di sini</Link>
+          </p>
+          <p className="auth-alt">
+            <Link to="/admin/login" className="muted">Masuk sebagai admin →</Link>
           </p>
         </form>
       </div>

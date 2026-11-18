@@ -1,85 +1,81 @@
 import { createContext, useContext, useEffect, useState } from 'react'
+import { api } from '../lib/api.js'
 
 const AuthContext = createContext(null)
-const USERS_KEY = 'zaa_users'
-const SESSION_KEY = 'zaa_user'
-
-function safeParse(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key)
-    if (!raw) return fallback
-    const parsed = JSON.parse(raw)
-    return parsed ?? fallback
-  } catch {
-    return fallback
-  }
-}
-
-function loadUsers() {
-  const users = safeParse(USERS_KEY, [])
-  return Array.isArray(users) ? users : []
-}
-
-function loadSession() {
-  const u = safeParse(SESSION_KEY, null)
-  return u && typeof u.email === 'string' ? u : null
-}
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(loadSession)
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    try {
-      if (user) localStorage.setItem(SESSION_KEY, JSON.stringify(user))
-      else localStorage.removeItem(SESSION_KEY)
-    } catch {
-      /* ignore storage errors */
+    let active = true
+    async function boot() {
+      if (!api.getToken()) {
+        setLoading(false)
+        return
+      }
+      try {
+        const res = await api.get('/auth/me')
+        if (active) setUser(res.user)
+      } catch {
+        api.clearToken()
+        if (active) setUser(null)
+      } finally {
+        if (active) setLoading(false)
+      }
     }
-  }, [user])
-
-  function register(name, email, password) {
-    const cleanName = (name || '').trim()
-    const cleanEmail = (email || '').trim().toLowerCase()
-    if (!cleanName) return { ok: false, error: 'Nama wajib diisi.' }
-    if (!cleanEmail) return { ok: false, error: 'Email wajib diisi.' }
-    if (!password || password.length < 6)
-      return { ok: false, error: 'Password minimal 6 karakter.' }
-
-    const users = loadUsers()
-    if (users.some((u) => u.email === cleanEmail))
-      return { ok: false, error: 'Email sudah terdaftar.' }
-
-    const newUser = { name: cleanName, email: cleanEmail, password }
-    try {
-      localStorage.setItem(USERS_KEY, JSON.stringify([...users, newUser]))
-    } catch {
-      return { ok: false, error: 'Gagal menyimpan data.' }
+    boot()
+    return () => {
+      active = false
     }
-    setUser({ name: cleanName, email: cleanEmail })
-    return { ok: true }
+  }, [])
+
+  async function register(name, email, password) {
+    try {
+      const res = await api.post(
+        '/auth/register',
+        { name, email, password },
+        false
+      )
+      api.setToken(res.token)
+      setUser(res.user)
+      return { ok: true }
+    } catch (e) {
+      return { ok: false, error: e.message }
+    }
   }
 
-  function login(email, password) {
-    const cleanEmail = (email || '').trim().toLowerCase()
-    if (!cleanEmail) return { ok: false, error: 'Email wajib diisi.' }
-    if (!password) return { ok: false, error: 'Password wajib diisi.' }
+  async function login(email, password) {
+    try {
+      const res = await api.post('/auth/login', { email, password }, false)
+      api.setToken(res.token)
+      setUser(res.user)
+      return { ok: true }
+    } catch (e) {
+      return { ok: false, error: e.message }
+    }
+  }
 
-    const users = loadUsers()
-    const found = users.find(
-      (u) => u.email === cleanEmail && u.password === password
-    )
-    if (!found) return { ok: false, error: 'Email atau password salah.' }
-
-    setUser({ name: found.name, email: found.email })
-    return { ok: true }
+  async function adminLogin(email, password) {
+    try {
+      const res = await api.post('/auth/admin/login', { email, password }, false)
+      api.setToken(res.token)
+      setUser(res.user)
+      return { ok: true }
+    } catch (e) {
+      return { ok: false, error: e.message }
+    }
   }
 
   function logout() {
+    api.clearToken()
     setUser(null)
   }
 
   return (
-    <AuthContext.Provider value={{ user, register, login, logout }}>
+    <AuthContext.Provider
+      value={{ user, loading, register, login, adminLogin, logout }}
+    >
       {children}
     </AuthContext.Provider>
   )

@@ -42,6 +42,11 @@ export default function Navbar() {
               )}
             </AnimatePresence>
           </NavLink>
+          {user?.role === 'admin' && (
+            <Link to="/admin" className="admin-pill">
+              Admin
+            </Link>
+          )}
           {user ? (
             <>
               <NavLink to="/akun">Akun</NavLink>

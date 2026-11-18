@@ -9,10 +9,14 @@ export default function Register() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
-    const res = register(name, email, password)
+    setError('')
+    setLoading(true)
+    const res = await register(name, email, password)
+    setLoading(false)
     if (!res.ok) {
       setError(res.error)
       return
@@ -63,8 +67,12 @@ export default function Register() {
             />
           </div>
 
-          <button type="submit" className="btn btn-primary btn-block">
-            Daftar
+          <button
+            type="submit"
+            className="btn btn-primary btn-block"
+            disabled={loading}
+          >
+            {loading ? 'Memproses…' : 'Daftar'}
           </button>
 
           <p className="auth-alt">

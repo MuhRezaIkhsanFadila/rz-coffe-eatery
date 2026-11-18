@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
-import { products, categories } from '../data/products.js'
+import { useProducts } from '../context/ProductsContext.jsx'
 import ProductGrid from '../components/ProductGrid.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 
 export default function Home() {
+  const { products, categories, loading } = useProducts()
   const [category, setCategory] = useState('Semua')
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState('default')
@@ -17,19 +18,20 @@ export default function Home() {
     }
     if (sort === 'cheap') list = [...list].sort((a, b) => a.price - b.price)
     if (sort === 'expensive') list = [...list].sort((a, b) => b.price - a.price)
-    if (sort === 'rating') list = [...list].sort((a, b) => b.rating - a.rating)
+    if (sort === 'rating')
+      list = [...list].sort((a, b) => (b.rating || 0) - (a.rating || 0))
     return list
-  }, [category, query, sort])
+  }, [products, category, query, sort])
 
   const bestSellers = useMemo(
     () => products.filter((p) => p.tag === 'Favorit'),
-    []
+    [products]
   )
 
   return (
     <div className="container">
       <section className="hero">
-        <h1>Kopi & makanan favoritmu, diantar hangat.</h1>
+        <h1>Kopi &amp; makanan favoritmu, diantar hangat.</h1>
         <p>
           Selamat datang di RZ COFFE &amp; EATERY. Pesan kopi, makanan, dan
           camilan pilihan langsung dari menu kami.
@@ -40,20 +42,26 @@ export default function Home() {
       <section className="promo">
         <div>
           <h2>Diskon 20% untuk pembelian pertama</h2>
-          <p>Pakai kode <strong>RZ20</strong> saat memesan menu favoritmu.</p>
+          <p>Pakai kode <strong>RZ20</strong> saat checkout menu favoritmu.</p>
         </div>
         <a href="#menu" className="btn">Pesan Sekarang</a>
       </section>
 
-      <div className="section-head">
-        <h2>Best Seller</h2>
-        <a href="#menu" className="link-more">Lihat semua →</a>
-      </div>
-      <ProductGrid products={bestSellers} />
+      {bestSellers.length > 0 && (
+        <>
+          <div className="section-head">
+            <h2>Best Seller</h2>
+            <a href="#menu" className="link-more">Lihat semua →</a>
+          </div>
+          <ProductGrid products={bestSellers} />
+        </>
+      )}
 
       <div className="section-head" id="menu">
         <h2>Menu Kami</h2>
-        <span className="muted">{filtered.length} produk</span>
+        <span className="muted">
+          {loading ? 'Memuat…' : `${filtered.length} produk`}
+        </span>
       </div>
 
       <div className="filters">
@@ -90,7 +98,9 @@ export default function Home() {
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {loading && products.length === 0 ? (
+        <p className="muted">Memuat menu…</p>
+      ) : filtered.length === 0 ? (
         <EmptyState
           title="Produk tidak ditemukan"
           message="Coba kata kunci atau kategori lain."

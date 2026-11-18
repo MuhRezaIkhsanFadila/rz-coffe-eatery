@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useCart } from '../context/CartContext.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
 import { formatRupiah } from '../lib/format.js'
 import QuantityStepper from '../components/QuantityStepper.jsx'
 import EmptyState from '../components/EmptyState.jsx'
@@ -8,6 +9,7 @@ import ProductImage from '../components/ProductImage.jsx'
 
 export default function Cart() {
   const { detailedItems, subtotal, setQty, removeItem, count } = useCart()
+  const { user } = useAuth()
 
   if (count === 0) {
     return (
@@ -22,6 +24,8 @@ export default function Cart() {
       </div>
     )
   }
+
+  const checkoutLink = user ? '/checkout' : '/login'
 
   return (
     <div className="container">
@@ -78,11 +82,15 @@ export default function Cart() {
             <span>{formatRupiah(subtotal)}</span>
           </div>
           <p className="summary-note">
-            Checkout belum tersedia pada versi demo ini.
+            Punya kode voucher? Masukkan saat checkout. Pembayaran via QRIS.
           </p>
-          <button type="button" className="btn btn-primary btn-block" disabled>
-            Lanjut ke pembayaran
-          </button>
+          <Link
+            to={checkoutLink}
+            state={user ? undefined : { from: '/checkout' }}
+            className="btn btn-primary btn-block"
+          >
+            {user ? 'Lanjut ke pembayaran' : 'Masuk untuk checkout'}
+          </Link>
           <Link to="/" className="btn btn-block" style={{ marginTop: 10 }}>
             Lanjut belanja
           </Link>

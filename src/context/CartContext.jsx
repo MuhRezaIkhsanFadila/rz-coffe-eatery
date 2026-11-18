@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
-import { products } from '../data/products.js'
+import { useProducts } from './ProductsContext.jsx'
 
 const CartContext = createContext(null)
 const STORAGE_KEY = 'zaa_cart'
@@ -19,6 +19,7 @@ function loadInitial() {
 }
 
 export function CartProvider({ children }) {
+  const { products } = useProducts()
   const [items, setItems] = useState(loadInitial)
 
   useEffect(() => {
@@ -67,12 +68,9 @@ export function CartProvider({ children }) {
         return { product, qty: i.qty, lineTotal: product.price * i.qty }
       })
       .filter(Boolean)
-  }, [items])
+  }, [items, products])
 
-  const count = useMemo(
-    () => items.reduce((sum, i) => sum + i.qty, 0),
-    [items]
-  )
+  const count = useMemo(() => items.reduce((sum, i) => sum + i.qty, 0), [items])
   const subtotal = useMemo(
     () => detailedItems.reduce((sum, i) => sum + i.lineTotal, 0),
     [detailedItems]

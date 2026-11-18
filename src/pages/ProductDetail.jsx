@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { products } from '../data/products.js'
+import { useProducts } from '../context/ProductsContext.jsx'
 import { useCart } from '../context/CartContext.jsx'
 import { formatRupiah } from '../lib/format.js'
 import QuantityStepper from '../components/QuantityStepper.jsx'
@@ -9,10 +9,21 @@ import ProductImage from '../components/ProductImage.jsx'
 
 export default function ProductDetail() {
   const { id } = useParams()
-  const product = products.find((p) => p.id === id)
+  const { getProduct, loading } = useProducts()
+  const product = getProduct(id)
   const { addItem } = useCart()
   const [qty, setQty] = useState(1)
   const [toast, setToast] = useState('')
+
+  if (loading && !product) {
+    return (
+      <div className="container">
+        <p className="muted" style={{ padding: '60px 0', textAlign: 'center' }}>
+          Memuat…
+        </p>
+      </div>
+    )
+  }
 
   if (!product) {
     return (
@@ -42,7 +53,7 @@ export default function ProductDetail() {
           <span className="product-cat">{product.category}</span>
           <h1>{product.name}</h1>
           <div className="detail-meta">
-            <span>★ {product.rating.toFixed(1)}</span>
+            <span>★ {Number(product.rating || 0).toFixed(1)}</span>
             {product.tag && <span>· {product.tag}</span>}
           </div>
           <p className="detail-desc">{product.description}</p>

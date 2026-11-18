@@ -1,0 +1,20 @@
+# Netlify config — RZ COFFE & EATERY
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+# API -> Netlify Function (harus sebelum SPA fallback)
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
+# SPA fallback: semua route lain ke index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
